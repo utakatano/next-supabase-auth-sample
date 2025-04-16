@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { supabase } from "@/utils/supabase";
+import { createSupabaseClient } from "@/utils/supabase";
 import { handleErrorMessage } from "@/utils/handleErrorMessage";
 
 export default function Login() {
@@ -19,6 +19,7 @@ export default function Login() {
     setMessage(null);
 
     try {
+      const supabase = createSupabaseClient();
       const { error } = await supabase.auth.signInWithPassword({
         email,
         password,
@@ -39,6 +40,35 @@ export default function Login() {
       });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handlePasswordReset = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    if (!email) {
+      setMessage({
+        type: "error",
+        text: "パスワードリセットのためにメールアドレスを入力してください。",
+      });
+      return;
+    }
+
+    try {
+      const supabase = createSupabaseClient();
+      const { error } = await supabase.auth.resetPasswordForEmail(email);
+      if (error) throw error;
+      setMessage({
+        type: "success",
+        text: "パスワードリセット用のメールを送信しました。",
+      });
+    } catch (error: unknown) {
+      setMessage({
+        type: "error",
+        text: handleErrorMessage(
+          error,
+          "エラーが発生しました。再度お試しください。"
+        ),
+      });
     }
   };
 
@@ -88,7 +118,13 @@ export default function Login() {
       </form>
 
       {message && (
-        <div className="mt-4 p-3 bg-red-100 text-red-700 rounded-md">
+        <div
+          className={`mt-4 p-3 rounded-md ${
+            message.type === "error"
+              ? "bg-red-100 text-red-700"
+              : "bg-green-100 text-green-700"
+          }`}
+        >
           {message.text}
         </div>
       )}
@@ -97,35 +133,7 @@ export default function Login() {
         <a
           href="#"
           className="text-sm text-blue-500 hover:underline"
-          onClick={async (e) => {
-            e.preventDefault();
-            if (!email) {
-              setMessage({
-                type: "error",
-                text: "パスワードリセットのためにメールアドレスを入力してください。",
-              });
-              return;
-            }
-
-            try {
-              const { error } = await supabase.auth.resetPasswordForEmail(
-                email
-              );
-              if (error) throw error;
-              setMessage({
-                type: "success",
-                text: "パスワードリセット用のメールを送信しました。",
-              });
-            } catch (error: unknown) {
-              setMessage({
-                type: "error",
-                text: handleErrorMessage(
-                  error,
-                  "エラーが発生しました。再度お試しください。"
-                ),
-              });
-            }
-          }}
+          onClick={handlePasswordReset}
         >
           パスワードをお忘れですか？
         </a>
